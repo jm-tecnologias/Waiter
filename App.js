@@ -1,20 +1,34 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import { StatusBar } from "expo-status-bar";
+import { NavigationContainer } from "@react-navigation/native";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
-export default function App() {
+import InitPage from "./src/pages/initPage";
+import Home from "./src/pages/home";
+import Restaurant from "./src/pages/restaurant";
+import Menu from "./src/pages/menu";
+import ItemDetails from "./src/pages/item-details";
+
+const Stack = createNativeStackNavigator();
+
+const App = () => {
   return (
-    <View style={styles.container}>
-      <Text>Open up App.js to start working on your app!</Text>
+    <NavigationContainer>
       <StatusBar style="auto" />
-    </View>
-  );
-}
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
+      <Stack.Navigator
+        initialRouteName="InitPage"
+        screenOptions={{
+          headerShown: false,
+        }}
+      >
+        <Stack.Screen name="InitPage" component={InitPage} />
+        <Stack.Screen name="Home" component={Home} />
+        <Stack.Screen name="Restaurant" component={Restaurant} />
+        <Stack.Screen name="Menu" component={Menu} />
+        <Stack.Screen name="ItemDetails" component={ItemDetails} />
+      </Stack.Navigator>
+    </NavigationContainer>
+  );
+};
+
+export default App;
