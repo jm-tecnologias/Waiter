@@ -50,7 +50,7 @@ const HelpButtons = () => {
 
         <HelpButton
           title="Solicitar Limpeza"
-          icon={ "Home" ? "home" : "home-outline"}
+          icon={ "Home" ? "trash" : "trash-outline"}
         />
 
         <HelpButton
@@ -62,16 +62,16 @@ const HelpButtons = () => {
       <View style={styles.container}>
         <HelpButton
           title="?"
-          icon={ "Explore" ? "compass" : "compass-outline"}
+          icon={ "Explore" ? "information-circle" : "information-circle-outline"}
+        />
+
+        <HelpButton 
+          title="?"
+          icon={ "Home" ? "information-circle" : "information-circle-outline"}
         />
 
         <HelpButton
-          title="?"
-          icon={ "Home" ? "home" : "home-outline"}
-        />
-
-        <HelpButton
-          title="?"
+          title="Pedir Conta"
           icon={"Orders" ? "receipt" : "receipt-outline"}
         />
       </View>

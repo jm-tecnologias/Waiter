@@ -10,257 +10,267 @@ import {
   View,
 } from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
+import DynamicForm from "./DynamicForm";
 
 
 const InitPage = ({ navigation }) => {
-  const { width } = useWindowDimensions();
-  const [permission, requestPermission] = useCameraPermissions();
-
-  const [scanned, setScanned] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [message, setMessage] = useState(
-    "Posicione o QR Code da mesa dentro da moldura.",
-  );
-
-  const scannerSize = Math.min(width * 0.72, 320);
-
-  const TABLE_TOKEN ="qQ0SnGSPoKZDhlYIWH2H0VmiJ73CdGBP";
-
-const API_URL = "http://127.0.0.1:8000";
-
-
-const processQRCode = async (qrData) => {
-  try {
-    setIsProcessing(true);
-    setMessage("A identificar o restaurante e a mesa...");
-
-    const qrContent =
-      typeof qrData === "string"
-        ? JSON.parse(qrData)
-        : qrData;
-
-    if (
-      !qrContent?.restaurant_id ||
-      !qrContent?.table_name ||
-      !qrContent?.table_token
-    ) {
-      throw new Error("Dados da mesa inválidos ou incompletos.");
-    }
-
-    navigation.replace("Home", {
-      restaurantId: qrContent.restaurant_id,
-      restaurantName: qrContent.restaurant_name ?? "Restaurante",
-      tableName: qrContent.table_name,
-      tableToken: qrContent.table_token,
-    });
-  } catch (error) {
-    console.error("Erro ao processar QR Code:", error);
-
-    setMessage(
-      "Este QR Code não pertence a uma mesa válida. Tente novamente.",
-    );
-
-    setScanned(false);
-    setIsProcessing(false);
-  }
-};
-
-const handleBarcodeScanned = ({ data }) => {
-  if (scanned || isProcessing) {
-    return;
-  }
-
-  setScanned(true);
-  processQRCode(data);
-};
-
-const handleSimulateScan = async () => {
-  if (scanned || isProcessing) {
-    return;
-  }
-
-  try {
-    setScanned(true);
-    setIsProcessing(true);
-    setMessage("A consultar os dados da mesa...");
-
-    const response = await fetch(
-      `${API_URL}/public/tables/${TABLE_TOKEN}`,
-      {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-        },
-      },
-    );
-
-    if (!response.ok) {
-      throw new Error(
-        `Falha ao consultar a mesa: HTTP ${response.status}`,
-      );
-    }
-
-
-    const tableData = await response.json();
-
-    await processQRCode(tableData);
-  } catch (error) {
-    console.error("Erro ao simular leitura:", error);
-
-    setMessage(
-      "Não foi possível consultar a mesa. Verifique a ligação com a API.",
-    );
-
-    setScanned(false);
-    setIsProcessing(false);
-  }
-};
-  const SimulationButton = () =>
-    __DEV__ ? (
-      <Pressable
-        onPress={handleSimulateScan}
-        accessibilityRole="button"
-        accessibilityLabel="Simular leitura do QR Code"
-        style={({ pressed }) => [
-          styles.testButton,
-          pressed && styles.buttonPressed,
-        ]}
-      >
-        <Text style={styles.testButtonText}>Simular QR Code</Text>
-      </Pressable>
-    ) : null;
-
-  if (!permission) {
-    return (
-      <View style={styles.centerContainer}>
-        <StatusBar style="dark" />
-        <ActivityIndicator size="large" color="#f28c00" />
-        <Text style={styles.loadingText}>
-          A verificar permissão da câmara...
-        </Text>
-      </View>
-    );
-  }
-
-  if (!permission.granted) {
-    return (
-      <View style={styles.permissionContainer}>
-        <StatusBar style="dark" />
-
-        <View style={styles.permissionIcon}>
-          <Text style={styles.permissionIconText}>▣</Text>
-        </View>
-
-        <Text style={styles.permissionTitle}>Permissão da câmara</Text>
-
-        <Text style={styles.permissionDescription}>
-          Para identificar o restaurante e a mesa, permita que a aplicação
-          utilize a câmara do dispositivo.
-        </Text>
-
-        <Pressable
-          onPress={requestPermission}
-          accessibilityRole="button"
-          accessibilityLabel="Permitir acesso à câmara"
-          style={({ pressed }) => [
-            styles.primaryButton,
-            pressed && styles.buttonPressed,
-          ]}
-        >
-          <Text style={styles.primaryButtonText}>Permitir câmara</Text>
-        </Pressable>
-
-        <SimulationButton />
-      </View>
-    );
-  }
-
-  return (
-    <View style={styles.container}>
-      <StatusBar style="light" />
-
-      <View style={styles.header}>
-        <Text style={styles.appName}>JM Restaurant</Text>
-        <Text style={styles.title}>Digitalize o QR Code</Text>
-
-        <Text style={styles.subtitle}>
-          Faça o scan do código disponível na sua mesa para consultar o
-          restaurante, os menus e efetuar pedidos.
-        </Text>
-      </View>
-
-      <View style={styles.cameraSection}>
-        <View
-          style={[
-            styles.scannerContainer,
-            {
-              width: scannerSize,
-              height: scannerSize,
-            },
-          ]}
-        >
-          <CameraView
-            style={StyleSheet.absoluteFillObject}
-            facing="back"
-            barcodeScannerSettings={{
-              barcodeTypes: ["qr"],
-            }}
-            onBarcodeScanned={scanned ? undefined : handleBarcodeScanned}
-          />
-
-          <View pointerEvents="none" style={styles.cameraOverlay} />
-          <View pointerEvents="none" style={styles.cornerTopLeft} />
-          <View pointerEvents="none" style={styles.cornerTopRight} />
-          <View pointerEvents="none" style={styles.cornerBottomLeft} />
-          <View pointerEvents="none" style={styles.cornerBottomRight} />
-
-          {isProcessing && (
-            <View style={styles.processingOverlay}>
-              <ActivityIndicator size="large" color="#ffffff" />
-              <Text style={styles.processingText}>A processar...</Text>
-            </View>
-          )}
-        </View>
-
-        <Text style={styles.instructionText}>{message}</Text>
-
-        <SimulationButton />
-
-        {scanned && !isProcessing && (
-          <Pressable
-            onPress={handleScanAgain}
-            accessibilityRole="button"
-            accessibilityLabel="Digitalizar novamente"
-            style={({ pressed }) => [
-              styles.secondaryButton,
-              pressed && styles.buttonPressed,
-            ]}
-          >
-            <Text style={styles.secondaryButtonText}>
-              Digitalizar novamente
-            </Text>
-          </Pressable>
-        )}
-
-        {Platform.OS === "web" && (
-          <Text style={styles.webHint}>
-            No navegador, permita o acesso à câmara ou use o botão de simulação.
-          </Text>
-        )}
-      </View>
-
-      <View style={styles.footer}>
-        <Text style={styles.footerTitle}>Como funciona?</Text>
-        <Text style={styles.footerText}>
-          1. Localize o QR Code colocado na mesa.
-        </Text>
-        <Text style={styles.footerText}>2. Aponte a câmara para o código.</Text>
-        <Text style={styles.footerText}>
-          3. Aguarde a abertura automática do menu.
-        </Text>
-      </View>
+  return(
+    <View>
+      <DynamicForm
+    formId={1}
+/>
     </View>
-  );
+  )
+//   const { width } = useWindowDimensions();
+//   const [permission, requestPermission] = useCameraPermissions();
+
+//   const [scanned, setScanned] = useState(false);
+//   const [isProcessing, setIsProcessing] = useState(false);
+//   const [message, setMessage] = useState(
+//     "Posicione o QR Code da mesa dentro da moldura.",
+//   );
+
+//   const scannerSize = Math.min(width * 0.72, 320);
+
+//   const TABLE_TOKEN ="qQ0SnGSPoKZDhlYIWH2H0VmiJ73CdGBP";
+
+// const API_URL = "http://127.0.0.1:8000";
+
+
+// const processQRCode = async (qrData) => {
+//   try {
+//     setIsProcessing(true);
+//     setMessage("A identificar o restaurante e a mesa...");
+
+//     const qrContent =
+//       typeof qrData === "string"
+//         ? JSON.parse(qrData)
+//         : qrData;
+
+//     if (
+//       !qrContent?.restaurant_id ||
+//       !qrContent?.table_name ||
+//       !qrContent?.table_token
+//     ) {
+//       throw new Error("Dados da mesa inválidos ou incompletos.");
+//     }
+
+//     navigation.replace("Home", {
+//       restaurantId: qrContent.restaurant_id,
+//       restaurantName: qrContent.restaurant_name ?? "Restaurante",
+//       tableName: qrContent.table_name,
+//       tableToken: qrContent.table_token,
+//     });
+//   } catch (error) {
+//     console.error("Erro ao processar QR Code:", error);
+
+//     setMessage(
+//       "Este QR Code não pertence a uma mesa válida. Tente novamente.",
+//     );
+
+//     setScanned(false);
+//     setIsProcessing(false);
+//   }
+// };
+
+// const handleBarcodeScanned = ({ data }) => {
+//   if (scanned || isProcessing) {
+//     return;
+//   }
+
+//   setScanned(true);
+//   processQRCode(data);
+// };
+
+// const handleSimulateScan = async () => {
+//   if (scanned || isProcessing) {
+//     return;
+//   }
+
+//   try {
+//     setScanned(true);
+//     setIsProcessing(true);
+//     setMessage("A consultar os dados da mesa...");
+
+//     const response = await fetch(
+//       `${API_URL}/public/tables/${TABLE_TOKEN}`,
+//       {
+//         method: "GET",
+//         headers: {
+//           Accept: "application/json",
+//         },
+//       },
+//     );
+
+//     if (!response.ok) {
+//       throw new Error(
+//         `Falha ao consultar a mesa: HTTP ${response.status}`,
+//       );
+//     }
+
+
+//     const tableData = await response.json();
+
+//     await processQRCode(tableData);
+//   } catch (error) {
+//     console.error("Erro ao simular leitura:", error);
+
+//     setMessage(
+//       "Não foi possível consultar a mesa. Verifique a ligação com a API.",
+//     );
+
+//     setScanned(false);
+//     setIsProcessing(false);
+//   }
+// };
+//   const SimulationButton = () =>
+//     __DEV__ ? (
+//       <Pressable
+//         onPress={handleSimulateScan}
+//         accessibilityRole="button"
+//         accessibilityLabel="Simular leitura do QR Code"
+//         style={({ pressed }) => [
+//           styles.testButton,
+//           pressed && styles.buttonPressed,
+//         ]}
+//       >
+//         <Text style={styles.testButtonText}>Simular QR Code</Text>
+//       </Pressable>
+//     ) : null;
+
+//   if (!permission) {
+//     return (
+//       <View style={styles.centerContainer}>
+//         <StatusBar style="dark" />
+//         <ActivityIndicator size="large" color="#f28c00" />
+//         <Text style={styles.loadingText}>
+//           A verificar permissão da câmara...
+//         </Text>
+//       </View>
+//     );
+//   }
+
+  // if (!permission.granted) {
+    // return (
+    //   <View style={styles.permissionContainer}>
+    //     <StatusBar style="dark" />
+
+    //     <View style={styles.permissionIcon}>
+    //       <Text style={styles.permissionIconText}>▣</Text>
+    //     </View>
+
+    //     <Text style={styles.permissionTitle}>Permissão da câmara</Text>
+
+    //     <Text style={styles.permissionDescription}>
+    //       Para identificar o restaurante e a mesa, permita que a aplicação
+    //       utilize a câmara do dispositivo.
+    //     </Text>
+
+    //     <Pressable
+    //       onPress={requestPermission}
+    //       accessibilityRole="button"
+    //       accessibilityLabel="Permitir acesso à câmara"
+    //       style={({ pressed }) => [
+    //         styles.primaryButton,
+    //         pressed && styles.buttonPressed,
+    //       ]}
+    //     >
+    //       <Text style={styles.primaryButtonText}>Permitir câmara</Text>
+    //     </Pressable>
+
+    //     <SimulationButton />
+    //   </View>
+    // );
+  // }
+
+  // return (
+    
+
+    // <View style={styles.container}>
+    //   <StatusBar style="light" />
+
+    //   <View style={styles.header}>
+    //     <Text style={styles.appName}>JM Restaurant</Text>
+    //     <Text style={styles.title}>Digitalize o QR Code</Text>
+
+    //     <Text style={styles.subtitle}>
+    //       Faça o scan do código disponível na sua mesa para consultar o
+    //       restaurante, os menus e efetuar pedidos.
+    //     </Text>
+    //   </View>
+
+    //   <View style={styles.cameraSection}>
+    //     <View
+    //       style={[
+    //         styles.scannerContainer,
+    //         {
+    //           width: scannerSize,
+    //           height: scannerSize,
+    //         },
+    //       ]}
+    //     >
+    //       <CameraView
+    //         style={StyleSheet.absoluteFillObject}
+    //         facing="back"
+    //         barcodeScannerSettings={{
+    //           barcodeTypes: ["qr"],
+    //         }}
+    //         onBarcodeScanned={scanned ? undefined : handleBarcodeScanned}
+    //       />
+
+    //       <View pointerEvents="none" style={styles.cameraOverlay} />
+    //       <View pointerEvents="none" style={styles.cornerTopLeft} />
+    //       <View pointerEvents="none" style={styles.cornerTopRight} />
+    //       <View pointerEvents="none" style={styles.cornerBottomLeft} />
+    //       <View pointerEvents="none" style={styles.cornerBottomRight} />
+
+    //       {isProcessing && (
+    //         <View style={styles.processingOverlay}>
+    //           <ActivityIndicator size="large" color="#ffffff" />
+    //           <Text style={styles.processingText}>A processar...</Text>
+    //         </View>
+    //       )}
+    //     </View>
+
+    //     <Text style={styles.instructionText}>{message}</Text>
+
+    //     <SimulationButton />
+
+    //     {scanned && !isProcessing && (
+    //       <Pressable
+    //         onPress={handleScanAgain}
+    //         accessibilityRole="button"
+    //         accessibilityLabel="Digitalizar novamente"
+    //         style={({ pressed }) => [
+    //           styles.secondaryButton,
+    //           pressed && styles.buttonPressed,
+    //         ]}
+    //       >
+    //         <Text style={styles.secondaryButtonText}>
+    //           Digitalizar novamente
+    //         </Text>
+    //       </Pressable>
+    //     )}
+
+    //     {Platform.OS === "web" && (
+    //       <Text style={styles.webHint}>
+    //         No navegador, permita o acesso à câmara ou use o botão de simulação.
+    //       </Text>
+    //     )}
+    //   </View>
+
+    //   <View style={styles.footer}>
+    //     <Text style={styles.footerTitle}>Como funciona?</Text>
+    //     <Text style={styles.footerText}>
+    //       1. Localize o QR Code colocado na mesa.
+    //     </Text>
+    //     <Text style={styles.footerText}>2. Aponte a câmara para o código.</Text>
+    //     <Text style={styles.footerText}>
+    //       3. Aguarde a abertura automática do menu.
+    //     </Text>
+    //   </View>
+    // </View>
+  // );
 };
 
 export default InitPage;
